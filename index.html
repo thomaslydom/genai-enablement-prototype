@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Case Generator — A GenAI Enablement Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a4a;
+    --ink-muted: #8a8a8a;
+    --paper: #f6f3ee;
+    --paper-warm: #efe9df;
+    --rule: #d8d2c4;
+    --accent: #b8442f;
+    --accent-soft: #e8d4cd;
+    --code-bg: #1c1917;
+    --code-ink: #e7e5e4;
+    --green: #4a6b3a;
+    --amber: #b8853b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter Tight', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: 16px;
+    overflow-x: hidden;
+  }
+
+  .grain {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 48px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADER */
+  header {
+    padding: 48px 0 32px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .meta-line {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-muted);
+    margin-bottom: 24px;
+  }
+
+  .meta-line .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 8px;
+    vertical-align: middle;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    font-variation-settings: 'opsz' 144;
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--accent);
+  }
+
+  .lede {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 720px;
+    margin-bottom: 32px;
+  }
+
+  .badges {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    border: 1px solid var(--rule);
+    background: var(--paper-warm);
+    color: var(--ink-soft);
+    border-radius: 2px;
+  }
+
+  /* CONTEXT BANNER */
+  .context-banner {
+    margin: 32px 0;
+    padding: 20px 24px;
+    background: var(--paper-warm);
+    border-left: 3px solid var(--accent);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+
+  .context-banner strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* MAIN GRID */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    padding: 48px 0;
+  }
+
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; }
+    .wrap { padding: 0 24px; }
+  }
+
+  .panel {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 32px;
+  }
+
+  .panel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    margin-bottom: 8px;
+  }
+
+  .panel h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 24px;
+    margin-bottom: 24px;
+    letter-spacing: -0.01em;
+  }
+
+  /* INPUT SIDE */
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  select, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 20px;
+    border-radius: 2px;
+    transition: border-color 0.2s;
+  }
+
+  select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  textarea {
+    min-height: 140px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .button:hover {
+    background: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .button .arrow {
+    transition: transform 0.2s;
+  }
+
+  .button:hover .arrow {
+    transform: translateX(3px);
+  }
+
+  /* OUTPUT SIDE */
+  .output-empty {
+    color: var(--ink-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 60px 20px;
+    border: 1px dashed var(--rule);
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+  }
+
+  .test-case {
+    border-left: 3px solid var(--rule);
+    padding: 16px 0 16px 20px;
+    margin-bottom: 20px;
+    transition: border-color 0.3s;
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards;
+  }
+
+  .test-case:nth-child(1) { animation-delay: 0.05s; }
+  .test-case:nth-child(2) { animation-delay: 0.15s; }
+  .test-case:nth-child(3) { animation-delay: 0.25s; }
+  .test-case:nth-child(4) { animation-delay: 0.35s; }
+  .test-case:nth-child(5) { animation-delay: 0.45s; }
+  .test-case:nth-child(6) { animation-delay: 0.55s; }
+  .test-case:nth-child(7) { animation-delay: 0.65s; }
+  .test-case:nth-child(8) { animation-delay: 0.75s; }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .test-case.positive { border-left-color: var(--green); }
+  .test-case.negative { border-left-color: var(--accent); }
+  .test-case.edge { border-left-color: var(--amber); }
+
+  .tc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .tc-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .tc-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  .tc-type.positive { background: #e3ecdb; color: var(--green); }
+  .tc-type.negative { background: var(--accent-soft); color: var(--accent); }
+  .tc-type.edge { background: #f4e6cc; color: var(--amber); }
+
+  .tc-title {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  .tc-content {
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  .tc-content strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .tc-steps {
+    margin-top: 8px;
+    padding-left: 20px;
+  }
+
+  .tc-steps li {
+    margin-bottom: 4px;
+  }
+
+  /* CONTEXT REVEAL */
+  .context-section {
+    margin-top: 64px;
+    padding: 48px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .context-section h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 32px;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+
+  .context-section .subtitle {
+    color: var(--ink-soft);
+    font-style: italic;
+    margin-bottom: 32px;
+    font-family: 'Fraunces', serif;
+  }
+
+  .toggle-context {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 1px solid var(--ink);
+    padding: 12px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    color: var(--ink);
+    margin-bottom: 24px;
+    transition: all 0.2s;
+  }
+
+  .toggle-context:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .context-content {
+    display: none;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    border-radius: 2px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+
+  .context-content.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .context-content .comment { color: #78716c; font-style: italic; }
+  .context-content .key { color: #fbbf24; }
+  .context-content .string { color: #86efac; }
+  .context-content .heading { color: #f87171; font-weight: 600; }
+
+  /* IMPACT SECTION */
+  .impact {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-top: 48px;
+    max-width: 760px;
+  }
+
+  @media (max-width: 768px) {
+    .impact { grid-template-columns: 1fr; }
+  }
+
+  .stat {
+    padding: 32px 24px;
+    background: white;
+    border: 1px solid var(--rule);
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 56px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-variation-settings: 'opsz' 144;
+  }
+
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+  }
+
+  .stat-def {
+    font-size: 13px;
+    color: var(--ink);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+    line-height: 1.5;
+  }
+
+  .stat-note {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* PRINCIPLES (Section A bullets) */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 32px;
+  }
+
+  @media (max-width: 768px) {
+    .principles { grid-template-columns: 1fr; }
+  }
+
+  .principle {
+    padding: 24px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--ink);
+  }
+
+  .principle-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 8px;
+    letter-spacing: -0.005em;
+  }
+
+  .principle-text {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  .lead-paragraph {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink);
+    max-width: 760px;
+    margin-bottom: 8px;
+  }
+
+  /* REQUIREMENT DISPLAY (read-only) */
+  .req-display {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .req-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+  }
+
+  .req-meta-item {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .req-meta-item.status::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+  }
+
+  .req-text-display {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink);
+    min-height: 80px;
+  }
+
+  .req-text-display.empty {
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  .req-footnote {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule);
+    font-size: 11.5px;
+    color: var(--ink-muted);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  /* REVIEW MOCKUP SECTION */
+  .review-mockup {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 36px 40px;
+    margin-top: 32px;
+    max-width: 760px;
+  }
+
+  .mockup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .mockup-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--ink);
+  }
+
+  .mockup-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-muted);
+  }
+
+  .mockup-intro {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+
+  .mockup-question {
+    margin-bottom: 28px;
+  }
+
+  .mockup-q-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .mockup-q-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .mockup-options {
+    margin-left: 0;
+  }
+
+  .mockup-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .mockup-radio {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--rule);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .mockup-checkbox {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--rule);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .mockup-input {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    border-radius: 2px;
+  }
+
+  .mockup-input.large {
+    min-height: 48px;
+  }
+
+  .mockup-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    flex-wrap: wrap;
+  }
+
+  .mockup-button {
+    padding: 10px 18px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+    background: white;
+    color: var(--ink-soft);
+  }
+
+  .mockup-button.primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    margin-left: auto;
+  }
+
+  .mockup-footnote {
+    margin-top: 24px;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    font-style: italic;
+    line-height: 1.6;
+    max-width: 640px;
+  }
+
+  /* THESIS */
+  .thesis {
+    margin-top: 80px;
+    padding: 48px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .thesis-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-muted);
+    margin-bottom: 16px;
+    color: #a8a29e;
+  }
+
+  .thesis blockquote {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: clamp(22px, 2.4vw, 30px);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    font-style: italic;
+  }
+
+  .thesis blockquote::before {
+    content: '"';
+    font-size: 64px;
+    color: var(--accent);
+    line-height: 0;
+    margin-right: 8px;
+    vertical-align: -20px;
+    font-family: 'Fraunces', serif;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 48px 0 32px;
+    margin-top: 64px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  footer a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  footer a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* LOADING */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 40px;
+    color: var(--ink-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .loading.show { display: block; }
+
+  .loading::after {
+    content: '...';
+    animation: dots 1.4s infinite;
+  }
+
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<div class="wrap">
+
+<header>
+  <div class="meta-line">
+    <span><span class="dot"></span>Prototype · GenAI Enablement</span>
+    <span>Built for the conversation, not for production</span>
+  </div>
+
+  <h1>Generating test cases<br>from <em>requirements</em>.</h1>
+
+  <p class="lede">
+    A small demonstration of context engineering in practice — using
+    test case authoring as one concrete example.
+  </p>
+
+  <div class="badges">
+    <span class="badge">Use case · Test authoring</span>
+    <span class="badge">Audience · Embedded engineers</span>
+    <span class="badge">Context · IEC 62304 / SAFe</span>
+    <span class="badge">Pre-baked outputs · No live API</span>
+  </div>
+
+  <div class="context-banner">
+    <strong>A note before you begin.</strong> This prototype runs entirely in the browser
+    with pre-generated outputs. No API calls, no keys, no cost. The point isn't to show
+    that an LLM can write test cases — that's table stakes. The point is to show how
+    the <em>surrounding design</em> (context, structure, integration) decides whether
+    adoption succeeds.
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="panel-label">Input · Requirement</div>
+    <h2>Pick a requirement</h2>
+
+    <label for="requirement">Select an example requirement</label>
+    <select id="requirement">
+      <option value="">— Choose one —</option>
+      <option value="ble_pairing">REQ-BT-014 · Bluetooth LE pairing time</option>
+      <option value="audio_latency">REQ-AUD-022 · Audio streaming latency</option>
+      <option value="battery_low">REQ-PWR-008 · Low-battery user notification</option>
+      <option value="ota_update">REQ-OTA-031 · Firmware over-the-air update</option>
+    </select>
+
+    <label>Requirement (from requirements management system)</label>
+    <div class="req-display" id="req-display">
+      <div class="req-meta" id="req-meta" style="display: none;">
+        <span class="req-meta-item" id="req-id">REQ-XX-000</span>
+        <span class="req-meta-item" id="req-version">v0.0.0</span>
+        <span class="req-meta-item status" id="req-status">Approved</span>
+        <span class="req-meta-item" id="req-date">—</span>
+      </div>
+      <div class="req-text-display empty" id="req-text-display">
+        Select a requirement above to see the approved version.
+      </div>
+      <div class="req-footnote" id="req-footnote" style="display: none;">
+        Requirements are read-only here. To modify, use the requirements management system — changes go through formal review and impact analysis before they reach this tool.
+      </div>
+    </div>
+
+    <button class="button" id="generate">
+      Generate test cases <span class="arrow">→</span>
+    </button>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">Output · Generated test cases</div>
+    <h2>Suggested coverage</h2>
+
+    <div class="loading" id="loading">Synthesising test cases</div>
+
+    <div id="output">
+      <div class="output-empty">
+        Select a requirement and click generate to see the suggested test coverage.
+      </div>
+    </div>
+  </section>
+</main>
+
+<section class="context-section">
+  <h2>What a GenAI enabling team actually builds</h2>
+  <p class="subtitle">The system around the AI, not the AI itself.</p>
+
+  <p class="lead-paragraph">
+    Generating plausible test cases is straightforward. Making sure engineers keep reading them carefully — month after month, release after release — is not. Automation bias is well-documented in regulated industries, and it shows up late: by the time defects appear in the field, the habit is already set. Its job is to design the surrounding system — friction in the right places, provenance by default, sampled review, real feedback loops — so AI assistance scales without quietly eroding the quality it was meant to lift.
+  </p>
+
+  <div class="principles">
+    <div class="principle">
+      <div class="principle-title">Friction by design</div>
+      <div class="principle-text">Approval flows that require engineers to articulate intent, not just click "accept".</div>
+    </div>
+    <div class="principle">
+      <div class="principle-title">Provenance, by default</div>
+      <div class="principle-text">Every AI-assisted artefact tagged and traceable.</div>
+    </div>
+    <div class="principle">
+      <div class="principle-title">Sampled deep review</div>
+      <div class="principle-text">10% of approved outputs go through senior review. If the error rate climbs, something has shifted — engineers, model, or both.</div>
+    </div>
+  </div>
+</section>
+
+<section class="context-section">
+  <h2>The interesting part</h2>
+  <p class="subtitle">What's actually sent to the model — and why it matters more than the model itself.</p>
+
+  <button class="toggle-context" id="toggle-context">
+    Reveal the system prompt <span>↓</span>
+  </button>
+
+  <div class="context-content" id="context-content"><span class="comment"># =====================================================================
+# SYSTEM PROMPT — Embedded Test Case Generator
+# Loaded once per session. The user selects an approved requirement;
+# the system loads it (with version) from requirements management.
+# This is where the product work lives — the model is the easy part.
+# =====================================================================</span>
+
+<span class="heading">## ROLE</span>
+You are a senior test engineer working on Class B medical device
+firmware (IEC 62304). You generate test cases from requirements
+written for embedded engineers building hearing instruments.
+
+<span class="heading">## OUTPUT CONTRACT</span>
+Always return between 5 and 8 test cases, structured as JSON:
+{
+  <span class="key">"id"</span>:          <span class="string">"TC-{REQ-ID}-{NN}"</span>,
+  <span class="key">"type"</span>:        <span class="string">"positive" | "negative" | "edge"</span>,
+  <span class="key">"title"</span>:       <span class="string">"&lt;short imperative sentence&gt;"</span>,
+  <span class="key">"preconditions"</span>: <span class="string">"&lt;state required before test&gt;"</span>,
+  <span class="key">"steps"</span>:       <span class="string">["&lt;step 1&gt;", "&lt;step 2&gt;", ...]</span>,
+  <span class="key">"expected"</span>:    <span class="string">"&lt;observable, measurable outcome&gt;"</span>,
+  <span class="key">"trace"</span>:       <span class="string">"&lt;requirement ID this covers&gt;"</span>,
+  <span class="key">"req_version"</span>: <span class="string">"&lt;version of the requirement at generation time&gt;"</span>
+}
+
+<span class="heading">## COVERAGE RULES</span>
+For every requirement, you MUST generate at minimum:
+  · 2 positive cases (happy path + one variation)
+  · 2 negative cases (invalid input, failure mode)
+  · 1 edge case (boundary value, timing limit, resource limit)
+
+<span class="heading">## CONSTRAINTS LIBRARY</span> <span class="comment">(auto-loaded per requirement type — not user input)</span>
+Embedded constraints to consider when relevant:
+  · Latency: audio path must remain &lt;10 ms end-to-end
+  · Power: any test using radio must note duty cycle
+  · Temperature: device-rated -10°C to +50°C
+  · Battery: rechargeable cell, ~24h continuous use
+
+<span class="heading">## QUALITY GATES</span>
+Reject any test case that:
+  · Cannot be observed without internal debug access
+  · Depends on implementation details rather than requirement text
+  · Lacks measurable expected outcome (no "works correctly")
+  · Cannot be traced back to the source requirement and its version
+
+<span class="heading">## TONE</span>
+Write like a colleague reviewing a PR. Direct. No filler.
+Prefer concrete numbers over adjectives.
+
+<span class="comment"># =====================================================================
+# Why this matters
+# ---------------------------------------------------------------------
+# A generic LLM can write "test cases". This prompt makes it write
+# YOUR organisation's test cases — traceable to a specific requirement
+# version, scoped to your constraints, formatted for your downstream
+# tools, aligned to your safety class. That work isn't done by the
+# model. It's done by whoever decides what goes in this file.
+#
+# That's the job.
+# =====================================================================</span></div>
+</section>
+
+<section class="context-section">
+  <h2>What we'd measure</h2>
+  <p class="subtitle">Adoption is only half the story. Knowing whether it's working is the other half.</p>
+
+  <p class="lead-paragraph">
+    A GenAI enabling team that doesn't measure outcomes is just a centre of enthusiasm. The right metrics depend on the workflow, the tooling already in place, and what the organisation wants to learn. They sit on different time horizons — some give signal in weeks, some in release cycles, some only after the product has been in the field for a year. Designing them well is part of the job, not an afterthought.
+  </p>
+</section>
+
+<footer>
+  <span>Prototype · 2026 · For discussion only</span>
+</footer>
+
+</div>
+
+<script>
+  // ===== DATA: Pre-baked requirements & test cases =====
+  const REQUIREMENTS = {
+    ble_pairing: {
+      id: "REQ-BT-014",
+      version: "v3.2.1",
+      approved: "Approved 2025-11-14",
+      risk: "low",
+      reviewLevel: "Light review",
+      riskControls: [
+        "RC-014.1 · Pairing timeout protection",
+        "RC-014.2 · Bond table overflow handling",
+        "RC-014.3 · RF interference resilience"
+      ],
+      text: "The hearing instrument shall complete Bluetooth LE pairing with a previously unpaired smartphone within 3 seconds, measured from the moment the user initiates pairing on the phone to the audible confirmation tone in the device.",
+      cases: [
+        { id: "TC-BT-014-01", type: "positive", title: "Successful pairing within time limit",
+          pre: "Device powered on, in pairing mode, no prior bonds present.",
+          steps: ["Initiate pairing from a supported iOS device", "Start stopwatch on user tap of 'Pair'", "Stop stopwatch when audible tone plays in device"],
+          expected: "Elapsed time ≤ 3000 ms. Pairing tone audible. Device appears as connected in OS settings." },
+        { id: "TC-BT-014-02", type: "positive", title: "Successful pairing on Android",
+          pre: "Device powered on, pairing mode, no prior bonds. Android 13+ phone.",
+          steps: ["Initiate pairing from Android Bluetooth settings", "Confirm pairing prompt within 5s", "Measure time to audible confirmation"],
+          expected: "Elapsed time ≤ 3000 ms. Connection persists after screen lock." },
+        { id: "TC-BT-014-03", type: "negative", title: "Pairing rejected after timeout",
+          pre: "Device in pairing mode. User does not confirm on phone within 30s.",
+          steps: ["Initiate pairing", "Wait 30s without confirming", "Observe device behaviour"],
+          expected: "Device exits pairing mode. Error tone plays. No partial bond stored in NVM." },
+        { id: "TC-BT-014-04", type: "negative", title: "Pairing fails when bond table full",
+          pre: "Device has 8 existing bonds (max capacity). Attempt 9th pairing.",
+          steps: ["Initiate pairing from new phone", "Observe response within 1s"],
+          expected: "Pairing rejected immediately. User receives 'memory full' tone. No existing bonds corrupted." },
+        { id: "TC-BT-014-05", type: "edge", title: "Pairing at boundary of 3-second limit",
+          pre: "RF environment with controlled interference. Test repeated 50 times.",
+          steps: ["Initiate pairing under controlled 2.4 GHz interference", "Record completion time per attempt"],
+          expected: "95th percentile completion time ≤ 3000 ms. No completion exceeds 3500 ms." },
+        { id: "TC-BT-014-06", type: "edge", title: "Pairing at low battery threshold",
+          pre: "Device battery at 5% (low-power mode active).",
+          steps: ["Initiate pairing", "Measure completion time", "Verify radio power level unchanged"],
+          expected: "Pairing completes ≤ 3000 ms. RF output power within spec. No spurious shutdown." }
+      ]
+    },
+    audio_latency: {
+      id: "REQ-AUD-022",
+      version: "v2.4.0",
+      approved: "Approved 2026-01-08",
+      risk: "medium",
+      reviewLevel: "Standard review",
+      riskControls: [
+        "RC-022.1 · Latency budget enforcement",
+        "RC-022.2 · DSP load monitoring",
+        "RC-022.3 · Cross-mode latency consistency"
+      ],
+      text: "End-to-end audio latency from microphone input to receiver output shall not exceed 10 milliseconds in standard listening mode, measured at the device's reference acoustic interface.",
+      cases: [
+        { id: "TC-AUD-022-01", type: "positive", title: "Latency within spec at 1 kHz tone",
+          pre: "Device in standard listening mode. Reference test fixture connected.",
+          steps: ["Inject 1 kHz sine wave at microphone", "Capture receiver output via reference coupler", "Measure phase delay across 1000 samples"],
+          expected: "Mean latency ≤ 10 ms. Standard deviation ≤ 0.5 ms." },
+        { id: "TC-AUD-022-02", type: "positive", title: "Latency stable across volume range",
+          pre: "Device in standard mode. Volume sweep 0–100% in 10% steps.",
+          steps: ["Measure latency at each volume step", "Compare against baseline at 50%"],
+          expected: "Latency variation across full volume range ≤ 0.3 ms." },
+        { id: "TC-AUD-022-03", type: "negative", title: "Mode switch does not violate latency",
+          pre: "Device transitioning from standby to active listening.",
+          steps: ["Trigger wake from standby", "Begin latency measurement immediately on first valid audio frame"],
+          expected: "First measurable frame ≤ 10 ms after wake. No dropped frames in first 100 ms." },
+        { id: "TC-AUD-022-04", type: "negative", title: "Latency under simultaneous BLE streaming",
+          pre: "Device streaming audio from phone via BLE. Microphone input also active.",
+          steps: ["Measure mic-to-receiver latency while BLE audio is mixed in", "Repeat over 5 minutes"],
+          expected: "Microphone path latency remains ≤ 10 ms. No glitches in either stream." },
+        { id: "TC-AUD-022-05", type: "edge", title: "Latency at maximum DSP load",
+          pre: "All optional audio features enabled (noise reduction, feedback canceller, directionality).",
+          steps: ["Measure latency with full DSP chain active", "Profile CPU load concurrently"],
+          expected: "Latency ≤ 10 ms even at peak processing load. No buffer underruns." },
+        { id: "TC-AUD-022-06", type: "edge", title: "Latency at low temperature",
+          pre: "Device conditioned at -10°C for 30 minutes prior to test.",
+          steps: ["Measure latency immediately on power-up at -10°C", "Repeat after 5 minutes of operation"],
+          expected: "Latency ≤ 10 ms across both measurements. No clock drift errors logged." }
+      ]
+    },
+    battery_low: {
+      id: "REQ-PWR-008",
+      version: "v1.7.2",
+      approved: "Approved 2025-09-22",
+      risk: "low",
+      reviewLevel: "Light review",
+      riskControls: [
+        "RC-008.1 · Threshold detection accuracy",
+        "RC-008.2 · Notification cadence reliability",
+        "RC-008.3 · Charge-state recovery"
+      ],
+      text: "When remaining battery capacity drops below 10%, the device shall play a distinctive low-battery audio notification, and shall repeat this notification every 10 minutes until the battery is recharged or the device shuts down.",
+      cases: [
+        { id: "TC-PWR-008-01", type: "positive", title: "Notification plays at 10% threshold",
+          pre: "Device powered, battery discharging from 15% under simulated normal use.",
+          steps: ["Monitor audio output continuously", "Log timestamp when battery crosses 10%"],
+          expected: "Notification audible within 30s of crossing 10% threshold. Audio matches spec waveform." },
+        { id: "TC-PWR-008-02", type: "positive", title: "Notification repeats every 10 minutes",
+          pre: "Device at 9% battery, continuous use simulated.",
+          steps: ["Record audio for 35 minutes", "Mark each notification occurrence"],
+          expected: "Three notifications observed at 10 ± 0.5 min intervals." },
+        { id: "TC-PWR-008-03", type: "negative", title: "No notification above threshold",
+          pre: "Device at 11% battery, slowly discharging.",
+          steps: ["Monitor audio output for 60 minutes while battery stays above 10%"],
+          expected: "No low-battery notification played during the test window." },
+        { id: "TC-PWR-008-04", type: "negative", title: "Notification stops on charging",
+          pre: "Device at 8% battery, notification has just played.",
+          steps: ["Place device on charger", "Continue audio monitoring for 20 minutes"],
+          expected: "No further notifications after charging starts. Charging indication unaffected." },
+        { id: "TC-PWR-008-05", type: "edge", title: "Notification at 10% boundary",
+          pre: "Battery held near 10% threshold (test rig with regulated power source).",
+          steps: ["Cycle battery state around the 10% threshold over 10 minutes", "Log notification events"],
+          expected: "No notification triggered just above threshold. Notification triggers within 30s of crossing below threshold." },
+        { id: "TC-PWR-008-06", type: "edge", title: "Notification during firmware OTA update",
+          pre: "Battery at 12%. OTA update initiated. Battery drops below 10% mid-update.",
+          steps: ["Trigger OTA at 12% battery", "Monitor audio and update progress"],
+          expected: "Notification plays without interrupting OTA. Update completes successfully or rolls back cleanly." }
+      ]
+    },
+    ota_update: {
+      id: "REQ-OTA-031",
+      version: "v4.1.0",
+      approved: "Approved 2026-02-03",
+      risk: "high",
+      reviewLevel: "Deep review",
+      riskControls: [
+        "RC-031.1 · Atomic update guarantee",
+        "RC-031.2 · Signature verification",
+        "RC-031.3 · Rollback on failure",
+        "RC-031.4 · Battery-state precondition"
+      ],
+      text: "The device shall support firmware over-the-air updates initiated from the companion app. The update process shall be atomic: a failure at any stage must leave the device with a working previous firmware version.",
+      cases: [
+        { id: "TC-OTA-031-01", type: "positive", title: "Successful update from valid signed image",
+          pre: "Device on firmware v3.1.0. Companion app holds signed v3.2.0 image.",
+          steps: ["Initiate OTA from app", "Allow transfer and install to complete", "Verify version after restart"],
+          expected: "Device boots into v3.2.0. All hearing functions operational. No data loss." },
+        { id: "TC-OTA-031-02", type: "positive", title: "Update resumable after BLE drop",
+          pre: "Device on v3.1.0. Update in progress at 60% transfer.",
+          steps: ["Disconnect BLE during transfer", "Reconnect within 5 minutes", "Allow update to resume"],
+          expected: "Transfer resumes from last verified block. Total update completes successfully." },
+        { id: "TC-OTA-031-03", type: "negative", title: "Update rejected with invalid signature",
+          pre: "Companion app holds image signed with wrong key.",
+          steps: ["Attempt to push image to device", "Observe device response"],
+          expected: "Device rejects image before write begins. Logs signature failure. Remains on v3.1.0." },
+        { id: "TC-OTA-031-04", type: "negative", title: "Power loss mid-write rolls back",
+          pre: "Device on v3.1.0. New image written to inactive partition. About to switch.",
+          steps: ["Force power-off during partition switch", "Restore power", "Boot device"],
+          expected: "Device boots cleanly into v3.1.0. Update marked as failed. No bricking." },
+        { id: "TC-OTA-031-05", type: "edge", title: "Update at minimum-allowed battery level",
+          pre: "Battery at the minimum level required by spec for OTA initiation.",
+          steps: ["Initiate OTA at minimum battery threshold", "Allow update to run to completion or auto-abort"],
+          expected: "Either update completes within battery budget, or aborts cleanly with warning. No partial flash." },
+        { id: "TC-OTA-031-06", type: "edge", title: "Update of maximum-size image",
+          pre: "Test image at upper size limit of partition (matches spec maximum).",
+          steps: ["Push max-size image", "Verify all blocks written and verified"],
+          expected: "Update succeeds within published time budget. No memory corruption in adjacent regions." }
+      ]
+    }
+  };
+
+  // ===== UI WIRING =====
+  const reqSelect = document.getElementById('requirement');
+  const reqDisplay = document.getElementById('req-display');
+  const reqMeta = document.getElementById('req-meta');
+  const reqId = document.getElementById('req-id');
+  const reqVersion = document.getElementById('req-version');
+  const reqStatus = document.getElementById('req-status');
+  const reqDate = document.getElementById('req-date');
+  const reqTextDisplay = document.getElementById('req-text-display');
+  const reqFootnote = document.getElementById('req-footnote');
+  const generateBtn = document.getElementById('generate');
+  const output = document.getElementById('output');
+  const loading = document.getElementById('loading');
+  const toggleBtn = document.getElementById('toggle-context');
+  const contextContent = document.getElementById('context-content');
+
+  reqSelect.addEventListener('change', () => {
+    const key = reqSelect.value;
+    if (key && REQUIREMENTS[key]) {
+      const req = REQUIREMENTS[key];
+      reqId.textContent = req.id;
+      reqVersion.textContent = req.version;
+      reqStatus.textContent = 'Approved';
+      reqDate.textContent = req.approved;
+      reqMeta.style.display = 'flex';
+      reqTextDisplay.textContent = req.text;
+      reqTextDisplay.classList.remove('empty');
+      reqFootnote.style.display = 'block';
+    } else {
+      reqMeta.style.display = 'none';
+      reqTextDisplay.textContent = 'Select a requirement above to see the approved version.';
+      reqTextDisplay.classList.add('empty');
+      reqFootnote.style.display = 'none';
+    }
+  });
+
+  generateBtn.addEventListener('click', () => {
+    const key = reqSelect.value;
+    if (!key || !REQUIREMENTS[key]) {
+      alert('Please select a requirement first.');
+      return;
+    }
+
+    output.innerHTML = '';
+    loading.classList.add('show');
+
+    // Simulate model latency for realism
+    setTimeout(() => {
+      loading.classList.remove('show');
+      const req = REQUIREMENTS[key];
+      const cases = req.cases;
+      output.innerHTML = cases.map(tc => `
+        <div class="test-case ${tc.type}">
+          <div class="tc-header">
+            <span class="tc-id">${tc.id}</span>
+            <span class="tc-type ${tc.type}">${tc.type}</span>
+          </div>
+          <div class="tc-title">${tc.title}</div>
+          <div class="tc-content">
+            <strong>Preconditions:</strong> ${tc.pre}
+            <ol class="tc-steps">
+              ${tc.steps.map(s => `<li>${s}</li>`).join('')}
+            </ol>
+            <strong>Expected:</strong> ${tc.expected}
+          </div>
+        </div>
+      `).join('');
+    }, 900);
+  });
+
+  toggleBtn.addEventListener('click', () => {
+    contextContent.classList.toggle('show');
+    const isOpen = contextContent.classList.contains('show');
+    toggleBtn.innerHTML = isOpen
+      ? 'Hide the system prompt <span>↑</span>'
+      : 'Reveal the system prompt <span>↓</span>';
+  });
+</script>
+
+</body>
+</html>
